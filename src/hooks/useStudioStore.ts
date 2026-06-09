@@ -8,6 +8,7 @@ type StudioState = {
   sourceUrl: string
   analysis: SiteAnalysis | null
   generatedSite: GeneratedSite | null
+  previewPageSlug: string
   loading: boolean
   error: string | null
   authToken: string | null
@@ -15,6 +16,7 @@ type StudioState = {
   authError: string | null
   brand: BrandSettings
   setSourceUrl: (value: string) => void
+  setPreviewPageSlug: (value: string) => void
   updateBrand: (value: Partial<BrandSettings>) => void
   analyzeSource: () => Promise<void>
   login: (password: string) => Promise<void>
@@ -44,6 +46,7 @@ export const useStudioStore = create<StudioState>()(
       sourceUrl: '',
       analysis: null,
       generatedSite: null,
+      previewPageSlug: '/',
       loading: false,
       error: null,
       authToken: null,
@@ -51,6 +54,7 @@ export const useStudioStore = create<StudioState>()(
       authError: null,
       brand: defaultBrand,
       setSourceUrl: (sourceUrl) => set({ sourceUrl }),
+      setPreviewPageSlug: (previewPageSlug) => set({ previewPageSlug }),
       updateBrand: (value) => {
         const brand = { ...get().brand, ...value }
         set({
@@ -104,6 +108,7 @@ export const useStudioStore = create<StudioState>()(
             analysis,
             brand: suggestedBrand,
             generatedSite: buildGeneratedSite(analysis, suggestedBrand),
+            previewPageSlug: '/',
             loading: false,
           })
         } catch (error) {
@@ -130,6 +135,7 @@ export const useStudioStore = create<StudioState>()(
           authToken: null,
           analysis: null,
           generatedSite: null,
+          previewPageSlug: '/',
           error: null,
           authError: null,
           loading: false,
@@ -142,6 +148,7 @@ export const useStudioStore = create<StudioState>()(
         sourceUrl: state.sourceUrl,
         analysis: state.analysis,
         generatedSite: state.generatedSite,
+        previewPageSlug: state.previewPageSlug,
         brand: state.brand,
         authToken: state.authToken,
       }),

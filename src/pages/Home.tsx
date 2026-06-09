@@ -37,6 +37,7 @@ export default function Home() {
     sourceUrl,
     analysis,
     generatedSite,
+    previewPageSlug,
     loading,
     error,
     authToken,
@@ -44,6 +45,7 @@ export default function Home() {
     authError,
     brand,
     setSourceUrl,
+    setPreviewPageSlug,
     updateBrand,
     analyzeSource,
     login,
@@ -181,7 +183,16 @@ export default function Home() {
                 <BrandStudio brand={brand} onChange={updateBrand} />
               </div>
 
-              <GeneratedPreview brand={brand} generatedSite={generatedSite} />
+              <GeneratedPreview
+                brand={brand}
+                generatedSite={generatedSite}
+                activePageSlug={previewPageSlug}
+                onSelectPage={setPreviewPageSlug}
+                onOpenPage={(slug) => {
+                  const path = slug === '/' ? '/site' : `/site${slug}`
+                  window.open(path, '_blank', 'noopener,noreferrer')
+                }}
+              />
             </div>
           </div>
         </div>

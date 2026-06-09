@@ -35,6 +35,25 @@ const take = (items: string[], count: number, fallback: string[]) => {
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 
+const slugify = (value: string) => {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return normalized || 'page'
+}
+
+const cleanPageName = (value: string) => {
+  const trimmed = value.replace(/\s+/g, ' ').trim()
+  if (!trimmed) {
+    return 'Page'
+  }
+
+  return trimmed.length > 38 ? `${trimmed.slice(0, 36)}…` : trimmed
+}
+
 export const buildGeneratedSite = (
   analysis: SiteAnalysis | null,
   brand: BrandSettings,
@@ -134,6 +153,84 @@ export const buildGeneratedSite = (
       ],
     },
   ]
+
+  const reservedSlugs = new Set(pages.map((page) => page.slug))
+  const reservedNames = new Set(pages.map((page) => page.name.toLowerCase()))
+
+  const addPage = (page: GeneratedPage) => {
+    if (pages.length >= 5) {
+      return
+    }
+    if (reservedSlugs.has(page.slug) || reservedNames.has(page.name.toLowerCase())) {
+      return
+    }
+    reservedSlugs.add(page.slug)
+    reservedNames.add(page.name.toLowerCase())
+    pages.push(page)
+  }
+
+  analysis.pages
+    .map((page) => {
+      const url = page.url
+      const path = url.startsWith('http') ? new URL(url).pathname : url
+      const segment = path.split('/').filter(Boolean)[0] ?? ''
+      const name = cleanPageName(page.title || segment || 'Page')
+      const slug = `/${slugify(segment || name)}`
+      return { name, slug }
+    })
+    .filter((candidate) => candidate.slug !== '/' && candidate.slug !== '/offre')
+    .slice(0, 4)
+    .forEach((candidate) => {
+      addPage({
+        slug: candidate.slug,
+        name: candidate.name,
+        sections: [
+          {
+            id: `${candidate.slug}-intro`,
+            eyebrow: 'Page',
+            title: `Tout sur ${candidate.name}`,
+            body: `Cette page reprend le contenu public detecte sur ${analysis.siteName}, puis le restructure pour etre plus lisible et plus vendeur.`,
+            highlight: analysis.positioning,
+            bullets: take(analysis.offers, 3, ['Clarte', 'Preuve', 'Action']),
+          },
+          {
+            id: `${candidate.slug}-cta`,
+            eyebrow: 'Conversion',
+            title: 'Un appel a l action plus direct',
+            body: `On garde l intention du site source, mais on pousse une promesse plus immediate et un parcours plus court.`,
+            highlight: analysis.callsToAction[0],
+            bullets: take(analysis.callsToAction, 3, ['Demander un devis', 'Reserver un appel', 'Recevoir les infos']),
+          },
+        ],
+      })
+    })
+
+  addPage({
+    slug: '/contact',
+    name: 'Contact',
+    sections: [
+      {
+        id: 'contact-cta',
+        eyebrow: 'Contact',
+        title: 'Parlons de ton besoin maintenant',
+        body: `Une page courte avec un seul objectif : faire passer le visiteur a l action, sans friction.`,
+        highlight: analysis.callsToAction[0],
+        bullets: take(analysis.contactInfo, 3, [
+          'Rappel rapide',
+          'Devis sous 24h',
+          'Intervention planifiee',
+        ]),
+      },
+      {
+        id: 'contact-proof',
+        eyebrow: 'Reassurance',
+        title: 'On rassure avant de demander',
+        body: `On ajoute preuve sociale et elements de confiance avant le formulaire pour augmenter le taux de conversion.`,
+        highlight: analysis.socialProof[0] || 'Ajouter des avis clients.',
+        bullets: take(analysis.socialProof, 3, ['Avis clients', 'Chiffres cles', 'Garanties']),
+      },
+    ],
+  })
 
   const shareHooks = [
     `${capitalize(brandName)} en une phrase : ${tone.prefix.toLowerCase()} qui rend ${analysis.siteName} plus net.`,

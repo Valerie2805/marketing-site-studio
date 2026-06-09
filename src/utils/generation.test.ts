@@ -46,7 +46,8 @@ describe('buildGeneratedSite', () => {
     expect(result).not.toBeNull()
     expect(result?.brandName).toBe('Nova Pulse')
     expect(result?.headline).toContain('Example')
-    expect(result?.pages).toHaveLength(2)
+    expect(result?.pages.length ?? 0).toBeGreaterThanOrEqual(2)
+    expect(result?.pages.some((page) => page.slug === '/offre')).toBe(true)
     expect(result?.shareHooks[0]).toContain('Nova Pulse')
   })
 

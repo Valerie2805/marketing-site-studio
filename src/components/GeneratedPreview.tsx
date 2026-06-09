@@ -3,9 +3,18 @@ import type { BrandSettings, GeneratedSite } from '../../shared/types'
 type GeneratedPreviewProps = {
   brand: BrandSettings
   generatedSite: GeneratedSite | null
+  activePageSlug: string
+  onSelectPage: (slug: string) => void
+  onOpenPage: (slug: string) => void
 }
 
-export default function GeneratedPreview({ brand, generatedSite }: GeneratedPreviewProps) {
+export default function GeneratedPreview({
+  brand,
+  generatedSite,
+  activePageSlug,
+  onSelectPage,
+  onOpenPage,
+}: GeneratedPreviewProps) {
   const dim = Number.isFinite(brand.backgroundDim) ? brand.backgroundDim : 0.72
   const zoom = Number.isFinite(brand.backgroundZoom) ? brand.backgroundZoom : 1
   const motionRange = Number.isFinite(brand.backgroundMotionRange) ? brand.backgroundMotionRange : 26
@@ -43,6 +52,9 @@ export default function GeneratedPreview({ brand, generatedSite }: GeneratedPrev
     )
   }
 
+  const pages = generatedSite.pages
+  const currentPage = pages.find((page) => page.slug === activePageSlug) ?? pages[0]
+
   return (
     <section className="rounded-[36px] border border-white/10 bg-[#050816] p-4 shadow-[0_30px_120px_rgba(2,6,23,0.5)]">
       <div className="rounded-[30px] border border-white/10 bg-[#0b1120] p-3">
@@ -50,6 +62,30 @@ export default function GeneratedPreview({ brand, generatedSite }: GeneratedPrev
           <span className="h-3 w-3 rounded-full bg-[#ff6b57]" />
           <span className="h-3 w-3 rounded-full bg-[#f59e0b]" />
           <span className="h-3 w-3 rounded-full bg-[#34d399]" />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {pages.map((page) => (
+              <button
+                key={page.slug}
+                type="button"
+                onClick={() => onSelectPage(page.slug)}
+                className={[
+                  'rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition',
+                  page.slug === currentPage.slug
+                    ? 'border-white/25 bg-white/10 text-white'
+                    : 'border-white/10 bg-white/5 text-white/65 hover:bg-white/10',
+                ].join(' ')}
+              >
+                {page.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => onOpenPage(currentPage.slug)}
+              className="rounded-full bg-[#67e8f9] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0b1120] transition hover:bg-[#8cf0fb]"
+            >
+              Ouvrir le site
+            </button>
+          </div>
         </div>
 
         <div className="relative overflow-hidden rounded-[26px] border border-white/10">
@@ -115,6 +151,12 @@ export default function GeneratedPreview({ brand, generatedSite }: GeneratedPrev
                   </button>
                   <button
                     type="button"
+                    onClick={() => {
+                      const next = pages.find((page) => page.slug !== currentPage.slug)
+                      if (next) {
+                        onSelectPage(next.slug)
+                      }
+                    }}
                     className="rounded-full border border-white/10 bg-white/6 px-6 py-3 text-sm font-semibold text-white"
                   >
                     {generatedSite.supportCta}
@@ -122,7 +164,7 @@ export default function GeneratedPreview({ brand, generatedSite }: GeneratedPrev
                 </div>
 
                 <div className="mt-10 grid gap-4 md:grid-cols-3">
-                  {generatedSite.pages[0].sections.slice(0, 3).map((section) => (
+                  {currentPage.sections.slice(0, 3).map((section) => (
                     <article key={section.id} className="rounded-[26px] border border-white/10 bg-white/5 p-5 backdrop-blur">
                       <p className="text-xs uppercase tracking-[0.22em] text-white/45">{section.eyebrow}</p>
                       <h4 className="mt-3 font-serif text-2xl text-white">{section.title}</h4>
