@@ -22,21 +22,8 @@ export default function GeneratedPreview({
   const overlayTop = Math.min(0.96, Math.max(0.3, dim))
   const overlayBottom = Math.min(0.96, Math.max(0.3, dim - 0.18))
 
-  const zoomPercent = Math.round(Math.max(0.6, Math.min(1.5, zoom)) * 100)
-  const backgroundStart = `${Math.max(0, 50 - motionRange / 2)}%`
-  const backgroundEnd = `${Math.min(100, 50 + motionRange / 2)}%`
-
-  const imageLayerStyle = brand.backgroundImage
-    ? {
-        backgroundImage: `url(${brand.backgroundImage})`,
-        backgroundSize: brand.backgroundMode === 'contain' ? 'contain' : `${zoomPercent}% auto`,
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        ['--bg-pan-start' as never]: backgroundStart,
-        ['--bg-pan-end' as never]: backgroundEnd,
-        ['--bg-pan-duration' as never]: `${Math.max(6, motionDuration)}s`,
-      }
-    : undefined
+  const scale = Math.max(0.7, Math.min(1.35, zoom))
+  const shift = `${Math.max(2, Math.min(22, motionRange / 2))}%`
 
   const gradientLayerStyle = {
     backgroundImage: brand.backgroundImage
@@ -90,12 +77,22 @@ export default function GeneratedPreview({
 
         <div className="relative overflow-hidden rounded-[26px] border border-white/10">
           {brand.backgroundImage ? (
-            <div
+            <img
+              src={brand.backgroundImage}
+              alt=""
               className={[
-                'absolute inset-0',
-                brand.backgroundMotion ? 'bg-pan-x' : '',
+                'absolute inset-0 h-full w-full select-none',
+                brand.backgroundMotion ? 'bg-shift-x' : '',
               ].join(' ')}
-              style={imageLayerStyle as never}
+              style={{
+                objectFit: brand.backgroundMode === 'contain' ? 'contain' : 'cover',
+                objectPosition: 'center',
+                transform: brand.backgroundMotion ? undefined : `scale(${scale})`,
+                ['--bg-scale' as never]: String(scale),
+                ['--bg-shift' as never]: shift,
+                ['--bg-duration' as never]: `${Math.max(6, motionDuration)}s`,
+              } as never}
+              draggable={false}
             />
           ) : null}
           <div className="absolute inset-0" style={gradientLayerStyle} />

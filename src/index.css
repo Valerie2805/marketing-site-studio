@@ -73,3 +73,28 @@ input::file-selector-button {
   animation: bg-pan-x var(--bg-pan-duration, 18s) ease-in-out infinite;
   will-change: background-position;
 }
+
+@keyframes bg-shift-x {
+  0% {
+    transform: translateX(calc(var(--bg-shift, 12%) * -1)) scale(var(--bg-scale, 1));
+  }
+  50% {
+    transform: translateX(var(--bg-shift, 12%)) scale(var(--bg-scale, 1));
+  }
+  100% {
+    transform: translateX(calc(var(--bg-shift, 12%) * -1)) scale(var(--bg-scale, 1));
+  }
+}
+
+.bg-shift-x {
+  animation: bg-shift-x var(--bg-duration, 18s) ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-shift-x {
+    animation: none;
+    transform: scale(var(--bg-scale, 1));
+  }
+}
