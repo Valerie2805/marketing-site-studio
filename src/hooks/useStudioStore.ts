@@ -1,24 +1,27 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { BrandSettings, GeneratedSite, SiteAnalysis } from '../../shared/types'
+import type { BrandSettings, SiteProject } from '../../shared/types'
 import { analyzeSiteRequest, loginRequest } from '@/utils/api'
 import { buildGeneratedSite } from '@/utils/generation'
 
 type StudioState = {
-  sourceUrl: string
-  analysis: SiteAnalysis | null
-  generatedSite: GeneratedSite | null
-  previewPageSlug: string
+  projects: SiteProject[]
+  activeProjectId: string
   loading: boolean
   error: string | null
   authToken: string | null
   authLoading: boolean
   authError: string | null
-  brand: BrandSettings
-  setSourceUrl: (value: string) => void
+  createProject: () => void
+  selectProject: (id: string) => void
+  updateProject: (
+    value: Partial<
+      Pick<SiteProject, 'label' | 'sourceUrl' | 'authorizationConfirmed' | 'authorizationEvidence'>
+    >,
+  ) => void
   setPreviewPageSlug: (value: string) => void
   updateBrand: (value: Partial<BrandSettings>) => void
-  analyzeSource: () => Promise<void>
+  analyzeActiveProject: () => Promise<void>
   login: (password: string) => Promise<void>
   logout: () => void
 }
@@ -40,32 +43,138 @@ const defaultBrand: BrandSettings = {
   signatureOffer: 'Une vitrine plus claire, plus memorisable et plus vendeuse.',
 }
 
+const createProjectId = () =>
+  `project-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+const createProjectLabel = (count: number) => `Projet ${count}`
+
+const createDefaultProject = (count: number): SiteProject => {
+  const now = Date.now()
+
+  return {
+    id: createProjectId(),
+    label: createProjectLabel(count),
+    sourceUrl: '',
+    authorizationConfirmed: false,
+    authorizationEvidence: '',
+    analysis: null,
+    generatedSite: null,
+    previewPageSlug: '/',
+    brand: { ...defaultBrand },
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+const getActiveProject = (state: Pick<StudioState, 'projects' | 'activeProjectId'>) =>
+  state.projects.find((project) => project.id === state.activeProjectId) ?? state.projects[0]
+
+const updateProjectList = (
+  projects: SiteProject[],
+  activeProjectId: string,
+  updater: (project: SiteProject) => SiteProject,
+) =>
+  projects.map((project) =>
+    project.id === activeProjectId ? { ...updater(project), updatedAt: Date.now() } : project,
+  )
+
+const brandMatchesDefault = (brand: BrandSettings) =>
+  brand.brandName === defaultBrand.brandName &&
+  brand.signatureOffer === defaultBrand.signatureOffer &&
+  brand.audienceFocus === defaultBrand.audienceFocus
+
 export const useStudioStore = create<StudioState>()(
   persist(
-    (set, get) => ({
-      sourceUrl: '',
-      analysis: null,
-      generatedSite: null,
-      previewPageSlug: '/',
+    (set, get) => {
+      const initialProject = createDefaultProject(1)
+
+      return {
+      projects: [initialProject],
+      activeProjectId: initialProject.id,
       loading: false,
       error: null,
       authToken: null,
       authLoading: false,
       authError: null,
-      brand: defaultBrand,
-      setSourceUrl: (sourceUrl) => set({ sourceUrl }),
-      setPreviewPageSlug: (previewPageSlug) => set({ previewPageSlug }),
+      createProject: () =>
+        set((state) => {
+          const project = createDefaultProject(state.projects.length + 1)
+          return {
+            projects: [...state.projects, project],
+            activeProjectId: project.id,
+            error: null,
+          }
+        }),
+      selectProject: (activeProjectId) => set({ activeProjectId, error: null }),
+      updateProject: (value) =>
+        set((state) => {
+          const activeProject = getActiveProject(state)
+          if (!activeProject) {
+            return state
+          }
+
+          return {
+            projects: updateProjectList(state.projects, activeProject.id, (project) => ({
+              ...project,
+              ...value,
+            })),
+          }
+        }),
+      setPreviewPageSlug: (previewPageSlug) =>
+        set((state) => {
+          const activeProject = getActiveProject(state)
+          if (!activeProject) {
+            return state
+          }
+
+          return {
+            projects: updateProjectList(state.projects, activeProject.id, (project) => ({
+              ...project,
+              previewPageSlug,
+            })),
+          }
+        }),
       updateBrand: (value) => {
-        const brand = { ...get().brand, ...value }
+        const state = get()
+        const activeProject = getActiveProject(state)
+        if (!activeProject) {
+          return
+        }
+
+        const brand = { ...activeProject.brand, ...value }
         set({
-          brand,
-          generatedSite: buildGeneratedSite(get().analysis, brand),
+          projects: updateProjectList(state.projects, activeProject.id, (project) => ({
+            ...project,
+            brand,
+            generatedSite: buildGeneratedSite(project.analysis, brand),
+          })),
         })
       },
-      analyzeSource: async () => {
-        const { sourceUrl, authToken } = get()
-        if (!sourceUrl.trim()) {
+      analyzeActiveProject: async () => {
+        const state = get()
+        const activeProject = getActiveProject(state)
+        const authToken = state.authToken
+
+        if (!activeProject) {
+          set({ error: 'Cree d abord un projet avant de lancer une analyse.' })
+          return
+        }
+
+        if (!activeProject.label.trim()) {
+          set({ error: 'Donne un nom de projet pour retrouver facilement chaque refonte.' })
+          return
+        }
+
+        if (!activeProject.sourceUrl.trim()) {
           set({ error: 'Ajoute une URL avant de lancer l analyse.' })
+          return
+        }
+
+        if (!activeProject.authorizationConfirmed) {
+          set({
+            error:
+              'Confirme que tu possedes ce site ou que tu disposes d une autorisation avant l analyse.',
+          })
           return
         }
 
@@ -77,11 +186,9 @@ export const useStudioStore = create<StudioState>()(
         set({ loading: true, error: null })
 
         try {
-          const currentBrand = get().brand
-          const analysis = await analyzeSiteRequest(sourceUrl, authToken)
-          const shouldAutoSuggest =
-            currentBrand.brandName === defaultBrand.brandName &&
-            currentBrand.signatureOffer === defaultBrand.signatureOffer
+          const currentBrand = activeProject.brand
+          const analysis = await analyzeSiteRequest(activeProject.sourceUrl, authToken)
+          const shouldAutoSuggest = brandMatchesDefault(currentBrand)
 
           const suggestedBrand = shouldAutoSuggest
             ? {
@@ -104,11 +211,21 @@ export const useStudioStore = create<StudioState>()(
               }
             : currentBrand
 
+          const autoLabel =
+            activeProject.label === createProjectLabel(state.projects.indexOf(activeProject) + 1)
+              ? analysis.siteName
+              : activeProject.label
+
           set({
-            analysis,
-            brand: suggestedBrand,
-            generatedSite: buildGeneratedSite(analysis, suggestedBrand),
-            previewPageSlug: '/',
+            projects: updateProjectList(state.projects, activeProject.id, (project) => ({
+              ...project,
+              label: autoLabel,
+              analysis,
+              brand: suggestedBrand,
+              generatedSite: buildGeneratedSite(analysis, suggestedBrand),
+              previewPageSlug: '/',
+              lastAnalyzedAt: Date.now(),
+            })),
             loading: false,
           })
         } catch (error) {
@@ -133,25 +250,36 @@ export const useStudioStore = create<StudioState>()(
       logout: () => {
         set({
           authToken: null,
-          analysis: null,
-          generatedSite: null,
-          previewPageSlug: '/',
           error: null,
           authError: null,
           loading: false,
         })
       },
-    }),
+    }},
     {
-      name: 'marketing-site-studio',
+      name: 'mirevona-rebuild-studio',
+      version: 1,
       partialize: (state) => ({
-        sourceUrl: state.sourceUrl,
-        analysis: state.analysis,
-        generatedSite: state.generatedSite,
-        previewPageSlug: state.previewPageSlug,
-        brand: state.brand,
+        projects: state.projects,
+        activeProjectId: state.activeProjectId || state.projects[0]?.id || '',
         authToken: state.authToken,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) {
+          return
+        }
+
+        if (!state.projects.length) {
+          const project = createDefaultProject(1)
+          state.projects = [project]
+          state.activeProjectId = project.id
+          return
+        }
+
+        if (!state.activeProjectId) {
+          state.activeProjectId = state.projects[0].id
+        }
+      },
     },
   ),
 )

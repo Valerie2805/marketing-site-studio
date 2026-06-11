@@ -72,6 +72,21 @@ export type GeneratedSite = {
   faq: Array<{ question: string; answer: string }>
 }
 
+export type SiteProject = {
+  id: string
+  label: string
+  sourceUrl: string
+  authorizationConfirmed: boolean
+  authorizationEvidence: string
+  analysis: SiteAnalysis | null
+  generatedSite: GeneratedSite | null
+  previewPageSlug: string
+  brand: BrandSettings
+  createdAt: number
+  updatedAt: number
+  lastAnalyzedAt?: number
+}
+
 export type AnalyzeSiteRequest = {
   url: string
 }
@@ -87,4 +102,14 @@ export type AuthLoginRequest = {
 export type AuthLoginResponse = {
   token: string
   expiresAt: number
+}
+
+export type WpGenerateHomeRequest = {
+  url: string
+}
+
+export type WpGenerateHomeResponse = {
+  title: string
+  slug: string
+  content: string
 }

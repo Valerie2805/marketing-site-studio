@@ -13,6 +13,7 @@ import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import authRoutes from './routes/auth.js'
 import projectsRoutes from './routes/projects.js'
+import wpRoutes from './routes/wp.js'
 import { requireAuth } from './middleware/requireAuth.js'
 
 // for esm mode
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/projects', requireAuth, projectsRoutes)
+app.use('/api/wp', requireAuth, wpRoutes)
 
 /**
  * health

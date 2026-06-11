@@ -54,6 +54,18 @@ const cleanPageName = (value: string) => {
   return trimmed.length > 38 ? `${trimmed.slice(0, 36)}…` : trimmed
 }
 
+const pathFromUrl = (value: string) => {
+  try {
+    if (value.startsWith('http')) {
+      return new URL(value).pathname
+    }
+  } catch {
+    return value
+  }
+
+  return value
+}
+
 export const buildGeneratedSite = (
   analysis: SiteAnalysis | null,
   brand: BrandSettings,
@@ -67,7 +79,7 @@ export const buildGeneratedSite = (
   const mainOffer = brand.signatureOffer || analysis.coreOffer
   const audience = brand.audienceFocus || 'les prospects les plus chauds'
   const brandName = brand.brandName || `${analysis.siteName} Studio`
-  const proofBanner = `${brandName} transforme le message source en experience ${tone.proofWord} pour ${audience}.`
+  const proofBanner = `${brandName} transforme un site autorise en experience ${tone.proofWord} pour ${audience}.`
 
   const pageSections = [
     {
@@ -110,7 +122,7 @@ export const buildGeneratedSite = (
       id: 'share',
       eyebrow: 'Angle viral',
       title: 'Des hooks concus pour etre memorises et partages',
-      body: `Le niveau de viralite ${viralBoost}/5 renforce les accroches, les contrastes et les appels a l action sans tomber dans la copie du site source.`,
+      body: `Le niveau de viralite ${viralBoost}/5 renforce les accroches, les contrastes et les appels a l action sans reproduire le site source a l identique.`,
       highlight: analysis.viralHooks[0],
       bullets: take(analysis.viralHooks, 3, [
         'Accroche forte',
@@ -134,7 +146,7 @@ export const buildGeneratedSite = (
           id: 'signature',
           eyebrow: 'Signature',
           title: mainOffer,
-          body: `Une page courte, claire et emotionnelle, focalisee sur ${audience}.`,
+          body: `Une page courte, claire et emotionnelle, focalisee sur ${audience} et prete a etre enrichie dans votre studio.`,
           highlight: analysis.coreOffer,
           bullets: take(analysis.callsToAction, 3, ['Prendre rendez-vous', 'Demander un audit', 'Voir les resultats']),
         },
@@ -158,9 +170,6 @@ export const buildGeneratedSite = (
   const reservedNames = new Set(pages.map((page) => page.name.toLowerCase()))
 
   const addPage = (page: GeneratedPage) => {
-    if (pages.length >= 5) {
-      return
-    }
     if (reservedSlugs.has(page.slug) || reservedNames.has(page.name.toLowerCase())) {
       return
     }
@@ -170,36 +179,48 @@ export const buildGeneratedSite = (
   }
 
   analysis.pages
-    .map((page) => {
-      const url = page.url
-      const path = url.startsWith('http') ? new URL(url).pathname : url
-      const segment = path.split('/').filter(Boolean)[0] ?? ''
-      const name = cleanPageName(page.title || segment || 'Page')
-      const slug = `/${slugify(segment || name)}`
-      return { name, slug }
+    .map((page, index) => {
+      const path = pathFromUrl(page.url)
+      const segments = path.split('/').filter(Boolean)
+      const segment = segments[segments.length - 1] ?? ''
+      const name = cleanPageName(page.title || segment || `Page ${index + 1}`)
+      const slug = segment ? `/${slugify(segment)}` : '/'
+      return { page, name, slug }
     })
     .filter((candidate) => candidate.slug !== '/' && candidate.slug !== '/offre')
-    .slice(0, 4)
-    .forEach((candidate) => {
+    .forEach((candidate, index) => {
+      const headings = take(candidate.page.headings, 3, analysis.heroLines)
       addPage({
         slug: candidate.slug,
         name: candidate.name,
         sections: [
           {
             id: `${candidate.slug}-intro`,
-            eyebrow: 'Page',
-            title: `Tout sur ${candidate.name}`,
-            body: `Cette page reprend le contenu public detecte sur ${analysis.siteName}, puis le restructure pour etre plus lisible et plus vendeur.`,
+            eyebrow: `Page source ${index + 1}`,
+            title: headings[0] || `Tout sur ${candidate.name}`,
+            body: `Cette page recompose les informations detectees sur ${candidate.name} pour creer une experience plus claire, plus actuelle et plus orientee conversion.`,
+            highlight: candidate.page.url,
+            bullets: headings,
+          },
+          {
+            id: `${candidate.slug}-structure`,
+            eyebrow: 'Structure',
+            title: `Comment ${candidate.name} est reframee`,
+            body: `La nouvelle version concentre l essentiel du message, redistribue les preuves et clarifie le prochain pas pour le visiteur.`,
             highlight: analysis.positioning,
-            bullets: take(analysis.offers, 3, ['Clarte', 'Preuve', 'Action']),
+            bullets: take(analysis.notableFacts, 3, ['Clarte', 'Preuve', 'Action']),
           },
           {
             id: `${candidate.slug}-cta`,
             eyebrow: 'Conversion',
             title: 'Un appel a l action plus direct',
-            body: `On garde l intention du site source, mais on pousse une promesse plus immediate et un parcours plus court.`,
+            body: `On garde l intention du site source, puis on renforce la lisibilite des benefices et la proximite du CTA principal.`,
             highlight: analysis.callsToAction[0],
-            bullets: take(analysis.callsToAction, 3, ['Demander un devis', 'Reserver un appel', 'Recevoir les infos']),
+            bullets: take(analysis.callsToAction, 3, [
+              'Demander un devis',
+              'Reserver un appel',
+              'Recevoir les infos',
+            ]),
           },
         ],
       })
@@ -251,12 +272,17 @@ export const buildGeneratedSite = (
       {
         question: 'Le site est-il une copie du site source ?',
         answer:
-          'Non. La logique consiste a reutiliser les informations publiques detectees pour creer une version originale, plus differenciante et plus performante.',
+          'Non. La logique consiste a reutiliser les informations detectees sur un site que vous possedez ou que vous etes autorisee a retravailler, afin de creer une version originale et plus performante.',
       },
       {
         question: 'Puis-je changer le branding ?',
         answer:
           'Oui. Les couleurs, le logo, l ambiance de fond, le ton marketing et le niveau de viralite sont ajustables en direct.',
+      },
+      {
+        question: 'La nouvelle version couvre-t-elle plusieurs pages ?',
+        answer:
+          'Oui. Chaque page source detectee peut devenir une page dediee dans la nouvelle structure, afin de reconstruire une arborescence complete et editable.',
       },
       {
         question: 'Qu est-ce qui rend la version plus virale ?',

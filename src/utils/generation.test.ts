@@ -33,9 +33,21 @@ const analysis: SiteAnalysis = {
   socialProof: ['Plus de 50 projets livres'],
   contactInfo: ['contact@example.com'],
   heroLines: ['Une promesse plus claire', 'Un design plus net'],
-  notableFacts: ['Fonde en 2020'],
+  notableFacts: ['Fonde en 2020', 'Equipe senior', 'Delais raccourcis'],
   viralHooks: ['Une version plus memorisable'],
-  pages: [{ url: 'https://example.com', title: 'Accueil', headings: ['Hero'] }],
+  pages: [
+    { url: 'https://example.com', title: 'Accueil', headings: ['Hero'] },
+    {
+      url: 'https://example.com/services',
+      title: 'Services',
+      headings: ['Audit complet', 'Accompagnement continu'],
+    },
+    {
+      url: 'https://example.com/contact',
+      title: 'Contact',
+      headings: ['Parler a un expert'],
+    },
+  ],
   diagnostic: ['Le CTA principal doit etre renforce'],
 }
 
@@ -48,7 +60,9 @@ describe('buildGeneratedSite', () => {
     expect(result?.headline).toContain('Example')
     expect(result?.pages.length ?? 0).toBeGreaterThanOrEqual(2)
     expect(result?.pages.some((page) => page.slug === '/offre')).toBe(true)
+    expect(result?.pages.some((page) => page.slug === '/services')).toBe(true)
     expect(result?.shareHooks[0]).toContain('Nova Pulse')
+    expect(result?.faq.some((item) => item.question.includes('plusieurs pages'))).toBe(true)
   })
 
   it('retourne null quand aucune analyse n est disponible', () => {

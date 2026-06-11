@@ -6,22 +6,31 @@ const mapSlugToPath = (slug: string) => (slug === '/' ? '/site' : `/site${slug}`
 
 export default function Site() {
   const params = useParams<{ page?: string }>()
-  const {
-    authToken,
-    authLoading,
-    authError,
-    login,
-    brand,
-    generatedSite,
-  } = useStudioStore()
+  const { authToken, authLoading, authError, login, projects, activeProjectId } = useStudioStore()
+
+  const activeProject =
+    projects.find((project) => project.id === activeProjectId) ?? projects[0] ?? null
+  const brand = activeProject?.brand
+  const generatedSite = activeProject?.generatedSite ?? null
+  const currentBrand = brand ?? {
+    primaryColor: '#0f172a',
+    accentColor: '#ff6b57',
+    backgroundImage: undefined,
+    backgroundMode: 'cover' as const,
+    backgroundMotion: false,
+    tone: 'viral' as const,
+    viralityLevel: 3,
+  }
 
   const slug = params.page ? `/${params.page}` : '/'
   const page = generatedSite?.pages.find((item) => item.slug === slug) ?? generatedSite?.pages[0]
 
-  const dim = Number.isFinite(brand.backgroundDim) ? brand.backgroundDim : 0.72
-  const zoom = Number.isFinite(brand.backgroundZoom) ? brand.backgroundZoom : 1
-  const motionRange = Number.isFinite(brand.backgroundMotionRange) ? brand.backgroundMotionRange : 26
-  const motionDuration = Number.isFinite(brand.backgroundMotionDuration) ? brand.backgroundMotionDuration : 18
+  const dim = Number.isFinite(brand?.backgroundDim) ? brand.backgroundDim : 0.72
+  const zoom = Number.isFinite(brand?.backgroundZoom) ? brand.backgroundZoom : 1
+  const motionRange = Number.isFinite(brand?.backgroundMotionRange) ? brand.backgroundMotionRange : 26
+  const motionDuration = Number.isFinite(brand?.backgroundMotionDuration)
+    ? brand.backgroundMotionDuration
+    : 18
   const overlayTop = Math.min(0.96, Math.max(0.3, dim))
   const overlayBottom = Math.min(0.96, Math.max(0.3, dim - 0.18))
   const scale = Math.max(0.7, Math.min(1.35, zoom))
@@ -69,26 +78,28 @@ export default function Site() {
                 ))}
               </nav>
               <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/55">
-                <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">{brand.tone}</span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                  viralite {brand.viralityLevel}/5
+                  {currentBrand.tone}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
+                  viralite {currentBrand.viralityLevel}/5
                 </span>
               </div>
             </div>
 
             <div className="relative">
-              {brand.backgroundImage ? (
+              {currentBrand.backgroundImage ? (
                 <img
-                  src={brand.backgroundImage}
+                  src={currentBrand.backgroundImage}
                   alt=""
                   className={[
                     'absolute inset-0 h-full w-full select-none',
-                    brand.backgroundMotion ? 'bg-shift-x' : '',
+                    currentBrand.backgroundMotion ? 'bg-shift-x' : '',
                   ].join(' ')}
                   style={{
-                    objectFit: brand.backgroundMode === 'contain' ? 'contain' : 'cover',
+                    objectFit: currentBrand.backgroundMode === 'contain' ? 'contain' : 'cover',
                     objectPosition: 'center',
-                    transform: brand.backgroundMotion ? undefined : `scale(${scale})`,
+                    transform: currentBrand.backgroundMotion ? undefined : `scale(${scale})`,
                     ['--bg-scale' as never]: String(scale),
                     ['--bg-shift' as never]: shift,
                     ['--bg-duration' as never]: `${Math.max(6, motionDuration)}s`,
@@ -99,14 +110,17 @@ export default function Site() {
               <div
                 className="absolute inset-0"
                 style={{
-                  backgroundImage: brand.backgroundImage
+                  backgroundImage: currentBrand.backgroundImage
                     ? `linear-gradient(135deg, rgba(2, 6, 23, ${overlayTop}), rgba(2, 6, 23, ${overlayBottom}))`
-                    : `radial-gradient(circle at top left, ${brand.accentColor}44, transparent 34%), linear-gradient(135deg, ${brand.primaryColor}, #040816 75%)`,
+                    : `radial-gradient(circle at top left, ${currentBrand.accentColor}44, transparent 34%), linear-gradient(135deg, ${currentBrand.primaryColor}, #040816 75%)`,
                 }}
               />
 
               <div className="relative px-6 py-10 md:px-10 md:py-14">
-                <p className="text-xs uppercase tracking-[0.32em]" style={{ color: brand.accentColor }}>
+                <p
+                  className="text-xs uppercase tracking-[0.32em]"
+                  style={{ color: currentBrand.accentColor }}
+                >
                   {page.name}
                 </p>
                 <h2 className="mt-4 max-w-3xl font-serif text-5xl leading-tight text-white">
